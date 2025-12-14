@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Alpaca Bank</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" type="text/css" />
+</head>
+
+<body>
+    <h1>Alpaca Bank 🦙</h1>
+
+    <h3>Flag</h3>
+    <blockquote id="flag">
+        You have to earn one trillion yen to get the flag.
+    </blockquote>
+
+    <h3>Register</h3>
+    <button id="register" type="button">Register</button>
+    <p>If you want to use a different account, please open another tab. </p>
+
+    <h3>Manage Account</h3>
+    <label for="id">Your ID</label>
+    <input type="text" id="id" />
+    <label for="balance">Your Balance</label>
+    <input type="text" id="balance" disabled />
+
+    <button id="sync" type="button">Sync</button>
+
+    <h3>Money Transfer</h3>
+    <label for="fromUser">Sender ID</label>
+    <input type="text" id="fromUser" />
+    <label for="toUser">Recipient ID</label>
+    <input type="text" id="toUser" />
+    <label for="amount">Amount</label>
+    <input type="number" id="amount" value="1" />
+    <button id="transfer">Transfer</button>
+
+    <script type="module">
+        const $ = document.getElementById.bind(document);
+
+        const query = async (path, data) => {
+            const method = data ? "POST" : "GET";
+            const body = data ? JSON.stringify(data) : undefined;
+            try {
+                const res = await fetch(`/api${path}`, {
+                    method,
+                    body,
+                    headers: { "Content-Type": "application/json" },
+                });
+                return { status: res.status, ...(await res.json()) };
+            } catch (err) {
+                return { status: 500, error: err.message };
+            }
+        };
+
+        // Register
+        const register = async () => {
+            const { status, error, user } = await query("/register", {});
+            if (status !== 201) {
+                alert(error);
+            } else {
+                $("id").value = user;
+                $("fromUser").value = user;
+                alert(`Registered successfully!\nYour ID: ${user}`);
+                sync();
+            }
+        };
+        $("register").addEventListener("click", register);
+
+        // Sync
+        const sync = async () => {
+            const id = $("id").value;
+            if (!id) alert("Please input your ID");
+            const { status, error, balance, flag } = await query(`/user/${id}`);
+            if (status !== 200) {
+                alert(error);
+            } else {
+                $("balance").value = balance;
+                if (flag) {
+                    $("flag").innerText = flag;
+                    alert(`Congratulations! Here is your flag:\n${flag}`);
+                }
+            }
+        };
+        $("sync").addEventListener("click", sync);
+
+        // Money Transfer
+        const transfer = async () => {
+            const amount = parseInt($("amount").value);
+            const fromUser = $("fromUser").value;
+            if (!fromUser) {
+                alert("Please input sender ID");
+                return;
+            }
+            const toUser = $("toUser").value;
+            if (!toUser) {
+                alert("Please input recipient ID");
+                return;
+            }
+
+            const { status, error, receipt } = await query("/transfer", {
+                fromUser,
+                toUser,
+                amount,
+            });
+            if (status !== 200) {
+                alert(error);
+            } else {
+                alert(`Transfer successful!\nReceipt: ${receipt}`);
+            }
+            sync();
+        };
+        $("transfer").addEventListener("click", transfer);
+    </script>
+</body>
+
+</html>
