@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# CTFフラグ復号化スクリプト - 文字単位の全探索
+
+echo "=========================================="
+echo "  CTF フラグ復号化 - 全探索方式"
+echo "=========================================="
+echo ""
+
+# 暗号化された16進数列
+target=(0x41 0x6D 0x72 0x62 0x67 0x64 0x81 0x46 0x74 0x79 0x6B 0x68 0x6D 0x45 0x6F 0x6C 0x7B 0x4E 0x7B 0x7D 0x73 0x42 0x85 0x79 0x7C 0x7C 0x8C 0x77 0x7D 0x73 0x82 0x62)
+
+# フラグの長さ
+flag_length=${#target[@]}
+echo "フラグの長さ: $flag_length 文字"
+echo ""
+
+# ./challが存在するか確認
+if [ ! -f "./chall" ]; then
+  echo "エラー: ./chall が見つかりません"
+  exit 1
+fi
+
+# 復号化されたフラグを格納
+flag=""
+
+# 探索する文字の範囲（印字可能なASCII文字）
+# 一般的なフラグ形式: flag{...} なので、まず英数字と記号
+chars='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_{}-!@#$%^&*()[]'
+
+echo "文字ごとに全探索を開始..."
+echo ""
+
+# 各位置について全探索
+for ((pos = 0; pos < flag_length; pos++)); do
+  echo "位置 $pos を探索中..."
+  found=false
+
+  # 全ての候補文字を試行
+  for ((i = 0; i < ${#chars}; i++)); do
+    char="${chars:i:1}"
+    test_string="${flag}${char}"
+
+    # ./challで暗号化（対話型: "Enter the flag: "というプロンプトあり）
+    result=$(echo "$test_string" | ./chall 2>&1 | grep "0x")
+
+    # カンマとスペースを除去して配列に分割
+    result_clean=$(echo "${result:16}" | tr -d ',')
+    IFS=' ' read -ra encrypted <<<"$result_clean"
+    echo "result: $result"
+    echo "result_clean: $result_clean"
+    # pos番目の暗号化結果が目標値と一致するかチェック
+    if [ "${encrypted[$pos]}" == "${target[$pos]}" ]; then
+      flag+="$char"
+      echo "  ✓ 位置 $pos: '$char' (暗号化: ${encrypted[$pos]})"
+      found=true
+      break
+    fi
+  done
+
+  if ! $found; then
+    echo "  ✗ 位置 $pos: 文字が見つかりませんでした"
+    echo "  より広範囲の文字セットを試行します..."
+
+    # 全ASCII印字可能文字で再試行
+    for ((ascii = 32; ascii <= 126; ascii++)); do
+      char=$(printf "\\$(printf '%03o' $ascii)")
+      test_string="${flag}${char}"
+
+      result=$(echo "$test_string" | ./chall 2>&1 | grep "0x")
+      result_clean=$(echo "$result" | tr -d ',')
+      IFS=' ' read -ra encrypted <<<"$result_clean"
+
+      if [ "${encrypted[$pos]}" == "${target[$pos]}" ]; then
+        flag+="$char"
+        echo "  ✓ 位置 $pos: '$char' (ASCII: $ascii, 暗号化: ${encrypted[$pos]})"
+        found=true
+        break
+      fi
+    done
+
+    if ! $found; then
+      echo "  エラー: 位置 $pos の文字を特定できませんでした"
+      exit 1
+    fi
+  fi
+done
+
+echo ""
+echo "=========================================="
+echo "  復号化完了！"
+echo "=========================================="
+echo ""
+echo "フラグ: $flag"
+echo ""
