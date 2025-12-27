@@ -1,0 +1,8 @@
+services:
+  overwrite:
+    build:
+      context: .
+    restart: unless-stopped
+    privileged: true
+    ports:
+      - "${PORT:-5000}:5000"
