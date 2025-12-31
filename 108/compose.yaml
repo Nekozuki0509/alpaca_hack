@@ -1,0 +1,9 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    init: true
+    ports:
+      - ${PORT:-10800}:10800
+    environment:
+      - FLAG=Alpaca{**********************************************REDACTED**********************************************}
