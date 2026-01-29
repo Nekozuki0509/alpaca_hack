@@ -1,0 +1,7 @@
+{
+  "name": "alpaca-bank",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
